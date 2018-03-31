@@ -58,7 +58,6 @@ struct do_work {
 
 struct do_doer {
     bool sorted;
-    time_t now;
     struct do_work **vector;
 };
 
@@ -68,7 +67,6 @@ struct do_doer *do_init() {
     struct do_doer *d = do_malloc(sizeof(*d));
     if (d) {
         d->sorted = true;
-        d->now = 0;
         d->vector = NULL;
     }
     return d;
@@ -209,7 +207,6 @@ size_t do_loop(struct do_doer *doer) {
         doer->sorted = true;
     }
 
-    time(&(doer->now));
     struct do_work **it;
     size_t i = 0;
     for (it = vector_begin(doer->vector); it != vector_end(doer->vector); i++) {
@@ -229,7 +226,7 @@ size_t do_loop(struct do_doer *doer) {
                     is_tbd = (*it)->pc.predicate.fn((*it)->data);
                     break;
                 case DO_PREDICATE_TIME:
-                    is_tbd = (doer->now >= (*it)->pc.predicate.tm);
+                    is_tbd = (time(NULL) >= (*it)->pc.predicate.tm);
                     break;
             }
 
