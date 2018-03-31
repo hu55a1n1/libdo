@@ -271,6 +271,7 @@ bool do_so_until(struct do_doer *doer, struct do_work *work, time_t expiry_tm) {
     if (doer && work) {
         struct do_work *expirer = do_work_after(expire_work, work, expiry_tm);
         if (expirer) {
+            expirer->prio = 0;
             if (do_so(doer, expirer)) {
                 if (do_so(doer, work)) {
                     return true;
