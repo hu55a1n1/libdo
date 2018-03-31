@@ -19,7 +19,6 @@
  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  SOFTWARE.
 */
-
 #ifndef LIB_DO_H
 #define LIB_DO_H
 
@@ -51,6 +50,11 @@ extern "C"
 typedef enum { false = 0, true = !false } bool;
 #endif
 
+#ifndef DO_SANS_TIME
+
+# include <time.h>
+
+#endif
 
 /* Types */
 typedef void *(*do_malloc_func)(size_t);

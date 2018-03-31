@@ -19,15 +19,7 @@
  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  SOFTWARE.
 */
-
 #include <stdlib.h> /* malloc, realloc, free */
-
-#ifndef DO_SANS_TIME
-
-# include <time.h>
-
-#endif
-
 #include "libdo.h"
 #include "vector.h"
 
