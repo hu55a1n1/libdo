@@ -41,7 +41,7 @@ union predicate {
 enum predicate_type {
     DO_PREDICATE_PTR,
     DO_PREDICATE_FUNC,
-    DO_PREDICATE_TIME,
+    DO_PREDICATE_TIME
 };
 
 struct predicate_container {
@@ -73,10 +73,10 @@ struct do_doer *do_init() {
 }
 
 void do_destroy(struct do_doer *doer) {
+    struct do_work **it;
     if (!doer)
         return;
 
-    struct do_work **it;
     for (it = vector_begin(doer->vector); it != vector_end(doer->vector); it++) {
         do_work_destroy(*it);
     }
@@ -184,12 +184,13 @@ struct do_work *do_work_after(work_func work_fn, void *data, time_t tm) {
 }
 
 void do_sort(struct do_doer *doer) {
+    size_t sz, i, j;
     if (!doer)
         return;
 
-    size_t sz = vector_size(doer->vector);
-    for (size_t i = 1; i < sz; ++i) {
-        for (size_t j = 0; j < sz - 1; ++j) {
+    sz = vector_size(doer->vector);
+    for (i = 1; i < sz; ++i) {
+        for (j = 0; j < sz - 1; ++j) {
             if (doer->vector[j]->prio > doer->vector[i]->prio)
                 vector_swap(doer->vector, j, i, struct do_work *);
         }
@@ -199,6 +200,8 @@ void do_sort(struct do_doer *doer) {
 
 /* Lifecycle */
 size_t do_loop(struct do_doer *doer) {
+    struct do_work **it;
+    size_t i;
     if (!doer)
         return 0;
 
@@ -207,8 +210,7 @@ size_t do_loop(struct do_doer *doer) {
         doer->sorted = true;
     }
 
-    struct do_work **it;
-    size_t i = 0;
+    i = 0;
     for (it = vector_begin(doer->vector); it != vector_end(doer->vector); i++) {
         bool erased = false;
         if ((*it)->work) {
@@ -231,8 +233,7 @@ size_t do_loop(struct do_doer *doer) {
             }
 
             if (is_tbd) {
-                bool ret = (*it)->work((*it)->data);
-                if (ret) {
+                if ((*it)->work((*it)->data)) {
                     do_not_do(doer, *it);
                     erased = true;
                 }
@@ -285,11 +286,12 @@ bool do_so_until(struct do_doer *doer, struct do_work *work, time_t expiry_tm) {
 }
 
 void do_not_do(struct do_doer *doer, struct do_work *work) {
+    struct do_work **it;
+    size_t i;
     if (!doer || !work)
         return;
 
-    struct do_work **it;
-    size_t i = 0;
+    i = 0;
     for (it = vector_begin(doer->vector); it != vector_end(doer->vector); i++, it++) {
         if (work == *it) {
             vector_erase(doer->vector, i);
