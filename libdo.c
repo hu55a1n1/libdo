@@ -192,8 +192,9 @@ void do_sort(struct do_doer *doer) {
     sz = vector_size(doer->vector);
     for (i = 1; i < sz; ++i) {
         for (j = 0; j < sz - 1; ++j) {
-            if (doer->vector[j]->prio > doer->vector[i]->prio)
+            if (doer->vector[j]->prio > doer->vector[i]->prio) {
                 vector_swap(doer->vector, j, i, struct do_work *);
+            }
         }
     }
 }
