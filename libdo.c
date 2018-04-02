@@ -20,6 +20,7 @@
  SOFTWARE.
 */
 #include <stdlib.h> /* malloc, realloc, free */
+#include <stdint.h> /* SIZE_MAX */
 #include "libdo.h"
 #include "vector.h"
 
@@ -96,7 +97,7 @@ void do_set_prio_changed(struct do_doer *doer) {
 struct do_work *do_work_init() {
     struct do_work *work = do_malloc(sizeof(*work));
     if (work) {
-        work->prio = 0;
+        work->prio = SIZE_MAX;
         work->pc.pt = DO_PREDICATE_PTR;
         work->pc.predicate.p = NULL;
         work->work_fn = NULL;
