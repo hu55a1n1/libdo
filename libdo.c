@@ -52,7 +52,7 @@ struct predicate_container {
 struct do_work {
     size_t prio;
     struct predicate_container pc;
-    work_func work;
+    work_func work_fn;
     void *data;
 };
 
@@ -74,9 +74,9 @@ struct do_doer *do_init() {
 
 void do_destroy(struct do_doer *doer) {
     struct do_work **it;
-    if (!doer)
+    if (!doer) {
         return;
-
+    }
     for (it = vector_begin(doer->vector); it != vector_end(doer->vector); it++) {
         do_work_destroy(*it);
     }
@@ -94,15 +94,15 @@ void do_set_prio_changed(struct do_doer *doer) {
 
 /* Work */
 struct do_work *do_work_init() {
-    struct do_work *dw = do_malloc(sizeof(*dw));
-    if (dw) {
-        dw->prio = true;
-        dw->pc.pt = DO_PREDICATE_PTR;
-        dw->pc.predicate.p = NULL;
-        dw->work = NULL;
-        dw->data = NULL;
+    struct do_work *work = do_malloc(sizeof(*work));
+    if (work) {
+        work->prio = 0;
+        work->pc.pt = DO_PREDICATE_PTR;
+        work->pc.predicate.p = NULL;
+        work->work_fn = NULL;
+        work->data = NULL;
     }
-    return dw;
+    return work;
 }
 
 void do_work_destroy(struct do_work *work) {
@@ -111,7 +111,7 @@ void do_work_destroy(struct do_work *work) {
 
 void do_work_set_work_func(struct do_work *work, work_func work_fn) {
     if (work) {
-        work->work = work_fn;
+        work->work_fn = work_fn;
     }
 }
 
@@ -151,43 +151,43 @@ void do_work_set_predicate_time(struct do_work *work, time_t predicate_tm) {
 
 /* Convenience initializers */
 struct do_work *do_work_if(work_func work_fn, void *data, bool *predicate_p) {
-    struct do_work *dw = do_work_init();
-    if (dw) {
-        do_work_set_work_func(dw, work_fn);
-        do_work_set_data(dw, data);
-        do_work_set_predicate_ptr(dw, predicate_p);
-        return dw;
+    struct do_work *work = do_work_init();
+    if (work) {
+        do_work_set_work_func(work, work_fn);
+        do_work_set_data(work, data);
+        do_work_set_predicate_ptr(work, predicate_p);
+        return work;
     }
     return NULL;
 }
 
 struct do_work *do_work_when(work_func work_fn, void *data, returns_true_func predicate_fn) {
-    struct do_work *dw = do_work_init();
-    if (dw) {
-        do_work_set_work_func(dw, work_fn);
-        do_work_set_data(dw, data);
-        do_work_set_predicate_func(dw, predicate_fn);
-        return dw;
+    struct do_work *work = do_work_init();
+    if (work) {
+        do_work_set_work_func(work, work_fn);
+        do_work_set_data(work, data);
+        do_work_set_predicate_func(work, predicate_fn);
+        return work;
     }
     return NULL;
 }
 
 struct do_work *do_work_after(work_func work_fn, void *data, time_t tm) {
-    struct do_work *dw = do_work_init();
-    if (dw) {
-        do_work_set_work_func(dw, work_fn);
-        do_work_set_data(dw, data);
-        do_work_set_predicate_time(dw, tm);
-        return dw;
+    struct do_work *work = do_work_init();
+    if (work) {
+        do_work_set_work_func(work, work_fn);
+        do_work_set_data(work, data);
+        do_work_set_predicate_time(work, tm);
+        return work;
     }
     return NULL;
 }
 
 void do_sort(struct do_doer *doer) {
     size_t sz, i, j;
-    if (!doer)
+    if (!doer) {
         return;
-
+    }
     sz = vector_size(doer->vector);
     for (i = 1; i < sz; ++i) {
         for (j = 0; j < sz - 1; ++j) {
@@ -202,18 +202,17 @@ void do_sort(struct do_doer *doer) {
 size_t do_loop(struct do_doer *doer) {
     struct do_work **it;
     size_t i;
-    if (!doer)
+    if (!doer) {
         return 0;
-
+    }
     if (!doer->sorted) {
         do_sort(doer);
         doer->sorted = true;
     }
-
     i = 0;
     for (it = vector_begin(doer->vector); it != vector_end(doer->vector); i++) {
         bool erased = false;
-        if ((*it)->work) {
+        if ((*it)->work_fn) {
             bool is_tbd = false;
             switch ((*it)->pc.pt) {
                 case DO_PREDICATE_PTR:
@@ -233,16 +232,16 @@ size_t do_loop(struct do_doer *doer) {
             }
 
             if (is_tbd) {
-                if ((*it)->work((*it)->data)) {
+                if ((*it)->work_fn((*it)->data)) {
                     do_not_do(doer, *it);
                     erased = true;
                 }
             }
         }
-        if (!erased)
+        if (!erased) {
             it++;
+        }
     }
-
     return vector_size(doer->vector);
 }
 
@@ -266,20 +265,22 @@ bool expire_work(void *work) {
 }
 
 bool do_so_until(struct do_doer *doer, struct do_work *work, time_t expiry_tm) {
-    if (doer && work) {
-        struct do_work *expirer = do_work_after(expire_work, work, expiry_tm);
-        if (expirer) {
-            expirer->prio = 0;
-            if (do_so(doer, expirer)) {
-                if (do_so(doer, work)) {
-                    return true;
-                } else {
-                    do_work_destroy(work);
-                    do_not_do(doer, expirer);
-                }
+    struct do_work *expirer;
+    if (!doer || !work) {
+        return false;
+    }
+    expirer = do_work_after(expire_work, work, expiry_tm);
+    if (expirer) {
+        expirer->prio = 0;
+        if (do_so(doer, expirer)) {
+            if (do_so(doer, work)) {
+                return true;
             } else {
-                do_work_destroy(expirer);
+                do_work_destroy(work);
+                do_not_do(doer, expirer);
             }
+        } else {
+            do_work_destroy(expirer);
         }
     }
     return false;
@@ -288,9 +289,9 @@ bool do_so_until(struct do_doer *doer, struct do_work *work, time_t expiry_tm) {
 void do_not_do(struct do_doer *doer, struct do_work *work) {
     struct do_work **it;
     size_t i;
-    if (!doer || !work)
+    if (!doer || !work) {
         return;
-
+    }
     i = 0;
     for (it = vector_begin(doer->vector); it != vector_end(doer->vector); i++, it++) {
         if (work == *it) {
