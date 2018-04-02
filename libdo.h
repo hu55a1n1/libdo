@@ -42,7 +42,7 @@ extern "C"
 # endif /* C90 */
 #endif /* C89 */
 
-#if defined(C99)
+#if defined(C99) || defined(__cplusplus)
 
 # include <stdbool.h>
 

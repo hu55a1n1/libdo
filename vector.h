@@ -83,19 +83,19 @@ do { \
  * @param size - the new capacity to set
  * @return void
  */
-#define vector_grow(vec, count) \
+#define vector_grow(vec, count, type) \
 do { \
     if(!(vec)) { \
-        size_t *_p_ = do_malloc((count) * sizeof(*(vec)) + (sizeof(size_t) * 2)); \
+        size_t *_p_ = (size_t *)do_malloc((count) * sizeof(*(vec)) + (sizeof(size_t) * 2)); \
         assert(_p_); \
-        (vec) = (void *)(&_p_[2]); \
+        (vec) = (type *)(&_p_[2]); \
         vector_set_capacity((vec), (count)); \
         vector_set_size((vec), 0); \
     } else { \
         size_t *_p1_ = &((size_t *)(vec))[-2]; \
-        size_t *_p2_ = do_realloc(_p1_, ((count) * sizeof(*(vec))+ (sizeof(size_t) * 2))); \
+        size_t *_p2_ = (size_t *)do_realloc(_p1_, ((count) * sizeof(*(vec))+ (sizeof(size_t) * 2))); \
         assert(_p2_); \
-        (vec) = (void *)(&_p2_[2]); \
+        (vec) = (type *)(&_p2_[2]); \
         vector_set_capacity((vec), (count)); \
     } \
 } while(0)
@@ -200,11 +200,11 @@ do { \
 
 #else
 
-#define vector_push_back(vec, value) \
+#define vector_push_back(vec, value, type) \
 do { \
     size_t _cap_ = vector_capacity(vec); \
     if(_cap_ <= vector_size(vec)) { \
-        vector_grow((vec), _cap_ + 1); \
+        vector_grow((vec), _cap_ + 1, type); \
     } \
     (vec)[vector_size(vec)] = (value); \
     vector_set_size((vec), vector_size(vec) + 1); \

@@ -65,7 +65,7 @@ struct do_doer {
 
 /* Doer */
 struct do_doer *do_init() {
-    struct do_doer *d = do_malloc(sizeof(*d));
+    struct do_doer *d = (struct do_doer *) do_malloc(sizeof(*d));
     if (d) {
         d->sorted = true;
         d->vector = NULL;
@@ -95,7 +95,7 @@ void do_set_prio_changed(struct do_doer *doer) {
 
 /* Work */
 struct do_work *do_work_init() {
-    struct do_work *work = do_malloc(sizeof(*work));
+    struct do_work *work = (struct do_work *) do_malloc(sizeof(*work));
     if (work) {
         work->prio = SIZE_MAX;
         work->pc.pt = DO_PREDICATE_PTR;
@@ -249,7 +249,7 @@ size_t do_loop(struct do_doer *doer) {
 bool do_so(struct do_doer *doer, struct do_work *work) {
     if (doer && work) {
         size_t oldsz = vector_size(doer->vector);
-        vector_push_back(doer->vector, work);
+        vector_push_back(doer->vector, work, struct do_work *);
         do_set_prio_changed(doer);
         if (vector_size(doer->vector) > oldsz) {
             return true;
@@ -260,7 +260,7 @@ bool do_so(struct do_doer *doer, struct do_work *work) {
 
 bool expire_work(void *work) {
     if (work) {
-        do_work_set_predicate_ptr(work, NULL);
+        do_work_set_predicate_ptr((struct do_work *) work, NULL);
     }
     return true;
 }
