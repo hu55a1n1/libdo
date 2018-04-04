@@ -1,18 +1,31 @@
-CC = gcc
-CFLAGS = -O0 -g -W -Wall -Wextra -Wno-missing-field-initializers -Wno-missing-braces -std=c89 -ansi -pedantic -pedantic-errors
+CC=gcc
+CXX=g++
+COMMON_FLAGS=-g -O0 -W -Wall -Wextra -pedantic -pedantic-errors
+CFLAGS=$(COMMON_FLAGS) -Wno-missing-field-initializers -Wno-missing-braces -std=c89 -ansi
+CXXFLAGS=$(COMMON_FLAGS) -std=c++11
+LDFLAGS=-g
+DEPS=libdo.h
+OBJC=tests.o libdo.o
+OBJCXX=testscpp.o libdo.o
 
-CPPC = g++
-CPPFLAGS = -O0 -g -Wall -Wextra -std=c++11
+RM=rm -f
+RMDIR=rm -rf
 
 all: tests testscpp
 
 .PHONY: tests testscpp
-tests: tests.c libdo.c
-	$(CC) $(CFLAGS) -o $@ tests.c libdo.c
 
-testscpp: testscpp.cpp libdo.c
-	$(CPPC) $(CPPFLAGS) -o $@ testscpp.cpp libdo.c
+%.o: %.c $(DEPS)
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+%.o: %.cpp $(DEPS)
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
+
+tests: $(OBJC)
+	$(CC) $(LDFLAGS) -o $@ $^
+
+testscpp: $(OBJCXX)
+	$(CXX) $(LDFLAGS) -o $@ $^
 
 clean:
-	rm -f tests testscpp *.o
-	rm -rf *.dSYM
+	$(RM) $(OBJC) $(OBJCXX) tests testscpp
