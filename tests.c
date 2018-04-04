@@ -102,6 +102,7 @@ bool work3_func(void *data) {
 }
 
 bool work4_func(void *data) {
+    runs++;
     do_work_set_predicate_time(data, time(NULL) + 1);
     return false;
 }
@@ -118,15 +119,17 @@ void test_time_predicate(struct do_doer *doer) {
 }
 
 void test_periodic_with_expiry(struct do_doer *doer) {
+    int until_sec = 3;
     time_t add_tm = time(NULL);
-    time_t until_sec = add_tm + 3;
+    time_t until_tm = add_tm + until_sec;
     struct do_work *work4 = do_work_after(work4_func, NULL, add_tm + 1);
     LOG("--- Test periodic work with expiry ---");
     TEST("Work-4 init with time predicate", work4);
     do_work_set_data(work4, work4);
-    TEST("Work-4 added to doer", do_so_until(doer, work4, until_sec));
+    TEST("Work-4 added to doer", do_so_until(doer, work4, until_tm));
     while (do_loop(doer));
-    TEST("Work-4 ran until specified seconds", time(NULL) == until_sec);
+    TEST("Work-4 ran until specified seconds", time(NULL) == until_tm);
+    TEST("Work-4 ran expected number of times", runs == until_sec);
 }
 
 void test_priorities(struct do_doer *doer) {
