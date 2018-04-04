@@ -204,6 +204,7 @@ void do_sort(struct do_doer *doer) {
 size_t do_loop(struct do_doer *doer) {
     struct do_work **it;
     size_t i;
+    time_t now_tm = time(NULL);
     if (!doer) {
         return 0;
     }
@@ -229,7 +230,7 @@ size_t do_loop(struct do_doer *doer) {
                     is_tbd = (*it)->pc.predicate.fn((*it)->data);
                     break;
                 case DO_PREDICATE_TIME:
-                    is_tbd = (time(NULL) >= (*it)->pc.predicate.tm);
+                    is_tbd = (now_tm >= (*it)->pc.predicate.tm);
                     break;
             }
 
