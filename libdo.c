@@ -1,4 +1,6 @@
 /*
+ This file is part of libdo
+
  Copyright (c) 2018 Shoaib Ahmed
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
