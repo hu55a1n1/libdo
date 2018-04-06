@@ -34,6 +34,7 @@ static do_malloc_func do_malloc = malloc;
 static do_realloc_func do_realloc = realloc;
 static do_free_func do_free = free;
 
+static void do_remove(struct do_doer *doer, struct do_work *work);
 
 union predicate {
     bool *p;
@@ -204,8 +205,8 @@ void do_sort(struct do_doer *doer) {
 
 /* Lifecycle */
 size_t do_loop(struct do_doer *doer) {
-    struct do_work **it;
-    size_t i;
+    struct do_work **it, **itbegin, **itend;
+    size_t i = 0, oldsz = 0;
     time_t now_tm = time(NULL);
     if (!doer) {
         return 0;
@@ -214,38 +215,48 @@ size_t do_loop(struct do_doer *doer) {
         do_sort(doer);
         doer->sorted = true;
     }
-    i = 0;
-    for (it = vector_begin(doer->vector); it != vector_end(doer->vector); i++) {
-        bool erased = false;
-        if ((*it)->work_fn) {
-            bool is_tbd = false;
-            switch ((*it)->pc.pt) {
-                case DO_PREDICATE_PTR:
-                    if ((*it)->pc.predicate.p) {
-                        is_tbd = *((*it)->pc.predicate.p);
-                    } else {
-                        do_not_do(doer, *it);
-                        continue;
-                    }
-                    break;
-                case DO_PREDICATE_FUNC:
-                    is_tbd = (*it)->pc.predicate.fn((*it)->data);
-                    break;
-                case DO_PREDICATE_TIME:
-                    is_tbd = (now_tm >= (*it)->pc.predicate.tm);
-                    break;
-            }
-
-            if (is_tbd) {
-                if ((*it)->work_fn((*it)->data)) {
+    itbegin = vector_begin(doer->vector);
+    itend = vector_end(doer->vector);
+    oldsz = vector_size(doer->vector);
+    for (it = itbegin; it != itend; it++, i++) {
+        bool is_tbd = false;
+        switch ((*it)->pc.pt) {
+            case DO_PREDICATE_PTR:
+                if ((*it)->pc.predicate.p) {
+                    is_tbd = *((*it)->pc.predicate.p);
+                } else {
                     do_not_do(doer, *it);
-                    erased = true;
                 }
+                break;
+            case DO_PREDICATE_FUNC:
+                is_tbd = (*it)->pc.predicate.fn((*it)->data);
+                break;
+            case DO_PREDICATE_TIME:
+                is_tbd = (now_tm >= (*it)->pc.predicate.tm);
+                break;
+        }
+
+        if (is_tbd) {
+            if ((*it)->work_fn && (*it)->work_fn((*it)->data)) {
+                if (vector_size(doer->vector) > oldsz) {
+                    /* Adjust iterators */
+                    size_t j = i;
+                    it = vector_begin(doer->vector);
+                    while (j--) it++;
+                    itend = vector_begin(doer->vector);
+                    j = oldsz;
+                    while (j--) itend++;
+                }
+                do_not_do(doer, *it);
             }
         }
-        if (!erased) {
-            it++;
+    }
+    for (it = vector_begin(doer->vector); it != vector_end(doer->vector);) {
+        if ((*it)->pc.pt == DO_PREDICATE_PTR && !(*it)->pc.predicate.p) {
+            do_remove(doer, *it);
+            continue;
         }
+        it++;
     }
     return vector_size(doer->vector);
 }
@@ -292,6 +303,11 @@ bool do_so_until(struct do_doer *doer, struct do_work *work, time_t expiry_tm) {
 }
 
 void do_not_do(struct do_doer *doer, struct do_work *work) {
+    (void) doer;
+    do_work_set_predicate_ptr(work, NULL);
+}
+
+void do_remove(struct do_doer *doer, struct do_work *work) {
     struct do_work **it;
     size_t i;
     if (!doer || !work) {
