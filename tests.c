@@ -53,7 +53,7 @@ void test_priorities(struct do_doer *doer);
 static int tests_passed;
 static int tests_failed;
 static int runs;
-
+static size_t run_order[6] = {0};
 
 int main() {
     struct do_doer *doer;
@@ -155,6 +155,81 @@ void test_periodic_with_expiry(struct do_doer *doer) {
     TEST("Work-4 ran expected number of times", runs == until_sec);
 }
 
+bool prio_work(void *data) {
+    size_t *prio = data;
+    run_order[runs++] = *prio;
+    return false;
+}
+
+bool orders_match(const size_t *order1, const size_t *order2, size_t sz) {
+    size_t i = 0;
+    for (i = 0; i < sz; ++i) {
+        if (order1[i] != order2[i]) {
+            return false;
+        }
+    }
+    return true;
+}
+
+void set_order(size_t *order, struct do_work *work1, struct do_work *work2, struct do_work *work3,
+               struct do_work *work4, struct do_work *work5, struct do_work *work6) {
+    do_work_set_prio(work1, order[0]);
+    do_work_set_data(work1, &order[0]);
+    do_work_set_prio(work2, order[1]);
+    do_work_set_data(work2, &order[1]);
+    do_work_set_prio(work3, order[2]);
+    do_work_set_data(work3, &order[2]);
+    do_work_set_prio(work4, order[3]);
+    do_work_set_data(work4, &order[3]);
+    do_work_set_prio(work5, order[4]);
+    do_work_set_data(work5, &order[4]);
+    do_work_set_prio(work6, order[5]);
+    do_work_set_data(work6, &order[5]);
+}
+
 void test_priorities(struct do_doer *doer) {
-    (void) doer;
+    bool run_work = true;
+    size_t order[6] = {1, 2, 3, 4, 5, 6};
+    struct do_work *w1 = do_work_if(prio_work, NULL, &run_work);
+    struct do_work *w2 = do_work_if(prio_work, NULL, &run_work);
+    struct do_work *w3 = do_work_if(prio_work, NULL, &run_work);
+    struct do_work *w4 = do_work_if(prio_work, NULL, &run_work);
+    struct do_work *w5 = do_work_if(prio_work, NULL, &run_work);
+    struct do_work *w6 = do_work_if(prio_work, NULL, &run_work);
+
+    LOG("--- Test priorities ---");
+    TEST("Works init with bool ptr predicate", w1 && w2 && w3 && w4 && w5 && w6);
+    do_so(doer, w1);
+    do_so(doer, w2);
+    do_so(doer, w3);
+    do_so(doer, w4);
+    do_so(doer, w5);
+    do_so(doer, w6);
+
+    set_order(order, w1, w2, w3, w4, w5, w6);
+    runs = 0;
+    do_loop(doer);
+    TEST("Works ran in order -> {1, 2, 3, 4, 5, 6}", orders_match(run_order, order, 6));
+
+    order[0] = 6;
+    order[1] = 5;
+    order[2] = 4;
+    order[3] = 3;
+    order[4] = 2;
+    order[5] = 1;
+    set_order(order, w1, w2, w3, w4, w5, w6);
+    runs = 0;
+    do_loop(doer);
+    TEST("Works ran in order -> {6, 5, 4, 3, 2, 1}", orders_match(run_order, order, 6));
+
+    order[0] = 1;
+    order[1] = 3;
+    order[2] = 5;
+    order[3] = 2;
+    order[4] = 4;
+    order[5] = 6;
+    set_order(order, w1, w2, w3, w4, w5, w6);
+    runs = 0;
+    do_loop(doer);
+    TEST("Works ran in order -> {1, 3, 5, 2, 4, 6}", orders_match(run_order, order, 6));
 }
