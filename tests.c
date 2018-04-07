@@ -156,15 +156,15 @@ void test_periodic_with_expiry(struct do_doer *doer) {
 }
 
 bool prio_work(void *data) {
-    size_t *prio = data;
-    run_order[runs++] = *prio;
+    size_t *id = data;
+    run_order[runs++] = *id;
     return false;
 }
 
 bool orders_match(const size_t *order1, const size_t *order2, size_t sz) {
     size_t i = 0;
     for (i = 0; i < sz; ++i) {
-        if (order1[i] != order2[i]) {
+        if (order1[order2[i] - 1] != (i + 1)) {
             return false;
         }
     }
@@ -174,28 +174,23 @@ bool orders_match(const size_t *order1, const size_t *order2, size_t sz) {
 void set_order(size_t *order, struct do_work *work1, struct do_work *work2, struct do_work *work3,
                struct do_work *work4, struct do_work *work5, struct do_work *work6) {
     do_work_set_prio(work1, order[0]);
-    do_work_set_data(work1, &order[0]);
     do_work_set_prio(work2, order[1]);
-    do_work_set_data(work2, &order[1]);
     do_work_set_prio(work3, order[2]);
-    do_work_set_data(work3, &order[2]);
     do_work_set_prio(work4, order[3]);
-    do_work_set_data(work4, &order[3]);
     do_work_set_prio(work5, order[4]);
-    do_work_set_data(work5, &order[4]);
     do_work_set_prio(work6, order[5]);
-    do_work_set_data(work6, &order[5]);
 }
 
 void test_priorities(struct do_doer *doer) {
     bool run_work = true;
     size_t order[6] = {1, 2, 3, 4, 5, 6};
-    struct do_work *w1 = do_work_if(prio_work, NULL, &run_work);
-    struct do_work *w2 = do_work_if(prio_work, NULL, &run_work);
-    struct do_work *w3 = do_work_if(prio_work, NULL, &run_work);
-    struct do_work *w4 = do_work_if(prio_work, NULL, &run_work);
-    struct do_work *w5 = do_work_if(prio_work, NULL, &run_work);
-    struct do_work *w6 = do_work_if(prio_work, NULL, &run_work);
+    size_t ids[6] = {1, 2, 3, 4, 5, 6};
+    struct do_work *w1 = do_work_if(prio_work, &ids[0], &run_work);
+    struct do_work *w2 = do_work_if(prio_work, &ids[1], &run_work);
+    struct do_work *w3 = do_work_if(prio_work, &ids[2], &run_work);
+    struct do_work *w4 = do_work_if(prio_work, &ids[3], &run_work);
+    struct do_work *w5 = do_work_if(prio_work, &ids[4], &run_work);
+    struct do_work *w6 = do_work_if(prio_work, &ids[5], &run_work);
 
     LOG("--- Test priorities ---");
     TEST("Works init with bool ptr predicate", w1 && w2 && w3 && w4 && w5 && w6);
@@ -207,6 +202,7 @@ void test_priorities(struct do_doer *doer) {
     do_so(doer, w6);
 
     set_order(order, w1, w2, w3, w4, w5, w6);
+    do_set_prio_changed(doer);
     runs = 0;
     do_loop(doer);
     TEST("Works ran in order -> {1, 2, 3, 4, 5, 6}", orders_match(run_order, order, 6));
@@ -218,6 +214,7 @@ void test_priorities(struct do_doer *doer) {
     order[4] = 2;
     order[5] = 1;
     set_order(order, w1, w2, w3, w4, w5, w6);
+    do_set_prio_changed(doer);
     runs = 0;
     do_loop(doer);
     TEST("Works ran in order -> {6, 5, 4, 3, 2, 1}", orders_match(run_order, order, 6));
@@ -229,6 +226,7 @@ void test_priorities(struct do_doer *doer) {
     order[4] = 4;
     order[5] = 6;
     set_order(order, w1, w2, w3, w4, w5, w6);
+    do_set_prio_changed(doer);
     runs = 0;
     do_loop(doer);
     TEST("Works ran in order -> {1, 3, 5, 2, 4, 6}", orders_match(run_order, order, 6));
