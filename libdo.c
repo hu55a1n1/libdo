@@ -127,6 +127,9 @@ void do_work_set_data(struct do_work *work, void *data) {
 
 void do_work_set_prio(struct do_work *work, size_t prio) {
     if (work) {
+        if (prio < 1) {
+            prio = 1;
+        }
         work->prio = prio;
     }
 }
