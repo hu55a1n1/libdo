@@ -135,9 +135,16 @@ void do_work_set_prio(struct do_work *work, size_t prio) {
 }
 
 void do_work_set_predicate_ptr(struct do_work *work, bool *predicate_p) {
-    if (work) {
+    if (work && predicate_p) {
         work->pc.pt = DO_PREDICATE_PTR;
         work->pc.predicate.p = predicate_p;
+    }
+}
+
+void do_work_set_predicate_ptr_null(struct do_work *work) {
+    if (work) {
+        work->pc.pt = DO_PREDICATE_PTR;
+        work->pc.predicate.p = NULL;
     }
 }
 
@@ -278,7 +285,7 @@ bool do_so(struct do_doer *doer, struct do_work *work) {
 
 bool expire_work(void *work) {
     if (work) {
-        do_work_set_predicate_ptr((struct do_work *) work, NULL);
+        do_work_set_predicate_ptr_null((struct do_work *) work);
     }
     return true;
 }
@@ -307,7 +314,7 @@ bool do_so_until(struct do_doer *doer, struct do_work *work, time_t expiry_tm) {
 
 void do_not_do(struct do_doer *doer, struct do_work *work) {
     (void) doer;
-    do_work_set_predicate_ptr(work, NULL);
+    do_work_set_predicate_ptr_null(work);
 }
 
 void do_remove(struct do_doer *doer, struct do_work *work) {
