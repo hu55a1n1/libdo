@@ -48,6 +48,12 @@ struct do_work *work = do_work_if(work_function, NULL, &run_work);
 /* This also gives up ownership of the work instance to the doer */
 do_so(doer, work);
 
+/* Call the loop() method */
+/* This calls all work functions whose associated predicate evaluates to true */
+while (do_loop(doer)) {
+    sleep(1);
+}
+
 /* Cleanup */
 do_destroy(doer);
 ```
